@@ -10,7 +10,6 @@ import pandas as pd
 from flask import Flask
 import dash
 from dash.dependencies import Input, Output, State
-from datetime import date
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.express as px
@@ -192,6 +191,7 @@ def filter_dataframe(df, operator_options, start_date, end_date):
     dff = df[df['Operator'].isin(operator_options)
           & (df['Date'] >= start_date)
           & (df['Date'] <= end_date)]
+    print(dff)
     return dff
 
 # Create callbacks
@@ -252,8 +252,8 @@ def make_hour_figure(operator_selected, start_date,end_date):
     print(df_graph)
     fig = go.Figure()
     fig.add_trace(go.Bar(x=df_graph['Hour'], y=df_graph['NumberPlanes'], name='NumberPlanes'))
-    fig.update_layout(title_text = "Number of flights for each day of the week")
-    fig.update_xaxes(title_text="Day of Week")
+    fig.update_layout(title_text = "Number of flights for each hour of the day")
+    fig.update_xaxes(title_text="Hour of the day")
     fig.update_yaxes(title_text="Number of flights")
 
     return fig
@@ -261,4 +261,4 @@ def make_hour_figure(operator_selected, start_date,end_date):
 
 # Main
 if __name__ == '__main__':
-    app.server.run(debug=True)
+    app.server.run(debug=True,port = 50001)
