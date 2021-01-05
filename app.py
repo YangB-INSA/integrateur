@@ -45,7 +45,7 @@ def drawText():
 df = px.data.iris()
 
 # Build App
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SLATE])
 
 app.layout = html.Div([
     dbc.Card(
