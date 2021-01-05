@@ -16,19 +16,22 @@ import plotly.express as px
 import plotly.graph_objs as go
 
 # Load data
-df = pd.read_csv('data/part-00000.csv',sep=';')
-df.columns = ['Date','Hour','Manufacturer','Operator','Model','NumberPlanes']
+df = pd.read_csv('data/data-plane.csv', sep=',', header = None, error_bad_lines=False)
+df = df.drop(df.columns[[0]], axis=1)
+df.columns = ['Date','Hour','Manufacturer','Model','Operator','NumberPlanes']
 
-df['Date'] = pd.to_datetime(df['Date'],format = '%d/%m/%Y')
-df['dayOfWeek']=df['Date'].dt.day_name()
-df['weekNumber']=df['Date'].dt.week
+df['Date'] = pd.to_datetime(df['Date'])
+df['DayOfWeek']=df['Date'].dt.day_name()
+df['WeekNumber']=df['Date'].dt.week
 
-monday_means = (df.loc[(df.dayOfWeek == 'Monday')]
+print(df)
+
+monday_means = (df.loc[(df.DayOfWeek == 'Monday')]
                 .mean()
                 .to_frame('Monday 1 Am'))
+           
+try_means = (df.groupby([df['DayOfWeek']]).mean())
 
-                
-try_means = (df.groupby([df['dayOfWeek']]).mean())
 print(monday_means)
 print(try_means)
 
@@ -40,6 +43,8 @@ print(try_means)
 
 start_date = min(df['Date'])
 end_date = max(df['Date']) 
+
+print(df.loc[(df['NumberPlanes'] > 1000)])
 
 # Operator option 
 operator_options = df.Operator.unique()
@@ -199,7 +204,6 @@ def filter_dataframe(df, operator_options, start_date, end_date):
     dff = df[df['Operator'].isin(operator_options)
           & (df['Date'] >= start_date)
           & (df['Date'] <= end_date)]
-    print(dff)
     return dff
 
 # Create callbacks
@@ -233,13 +237,10 @@ def make_weekday_figure(operator_selected, start_date,end_date):
     print('---------------- im in the second callback --------------------')
     weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     dff = filter_dataframe(df, operator_selected, start_date, end_date)
-    df_graph = dff.groupby([dff['dayOfWeek']]).mean().reset_index()
-    print(df_graph)
-    df_graph['dayOfWeek'] = pd.Categorical(df_graph['dayOfWeek'], categories= weekdays)
-    df_graph = df_graph.sort_values('dayOfWeek')
+    df_graph = dff.groupby([dff['WeekNumber']]).sum().reset_index()
     print(df_graph)
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=df_graph['dayOfWeek'], y=df_graph['NumberPlanes'],
+    fig.add_trace(go.Bar(x=df_graph['WeekNumber'], y=df_graph['NumberPlanes'],
                                 
                                  name='NumberPlanes'))
     fig.update_layout(title_text = "Average number of flights for each day of the week")
