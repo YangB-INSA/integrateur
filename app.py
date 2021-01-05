@@ -21,8 +21,16 @@ df.columns = ['Date','Hour','Manufacturer','Operator','Model','NumberPlanes']
 
 df['Date'] = pd.to_datetime(df['Date'],format = '%d/%m/%Y')
 df['dayOfWeek']=df['Date'].dt.day_name()
+df['weekNumber']=df['Date'].dt.week
 
-print(df)
+monday_means = (df.loc[(df.dayOfWeek == 'Monday')]
+                .mean()
+                .to_frame('Monday 1 Am'))
+
+                
+try_means = (df.groupby([df['dayOfWeek']]).mean())
+print(monday_means)
+print(try_means)
 
 #df_test = df.groupby([df['dayOfWeek']]).count()
 #print(df_test)
@@ -225,7 +233,7 @@ def make_weekday_figure(operator_selected, start_date,end_date):
     print('---------------- im in the second callback --------------------')
     weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     dff = filter_dataframe(df, operator_selected, start_date, end_date)
-    df_graph = dff.groupby([dff['dayOfWeek']]).sum().reset_index()
+    df_graph = dff.groupby([dff['dayOfWeek']]).mean().reset_index()
     print(df_graph)
     df_graph['dayOfWeek'] = pd.Categorical(df_graph['dayOfWeek'], categories= weekdays)
     df_graph = df_graph.sort_values('dayOfWeek')
@@ -234,7 +242,7 @@ def make_weekday_figure(operator_selected, start_date,end_date):
     fig.add_trace(go.Bar(x=df_graph['dayOfWeek'], y=df_graph['NumberPlanes'],
                                 
                                  name='NumberPlanes'))
-    fig.update_layout(title_text = "Number of flights for each day of the week")
+    fig.update_layout(title_text = "Average number of flights for each day of the week")
     fig.update_xaxes(title_text="Day of Week")
     fig.update_yaxes(title_text="Number of flights")
 
@@ -248,11 +256,11 @@ def make_hour_figure(operator_selected, start_date,end_date):
 
     print('---------------- im in the third callback --------------------')
     dff = filter_dataframe(df, operator_selected, start_date, end_date)
-    df_graph = dff.groupby([dff['Hour']]).sum().reset_index()
+    df_graph = dff.groupby([dff['Hour']]).mean().reset_index()
     print(df_graph)
     fig = go.Figure()
     fig.add_trace(go.Bar(x=df_graph['Hour'], y=df_graph['NumberPlanes'], name='NumberPlanes'))
-    fig.update_layout(title_text = "Number of flights for each hour of the day")
+    fig.update_layout(title_text = "Average number of flights for each hour of the day")
     fig.update_xaxes(title_text="Hour of the day")
     fig.update_yaxes(title_text="Number of flights")
 
