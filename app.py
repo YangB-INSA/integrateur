@@ -228,13 +228,13 @@ app.layout = html.Div(
                     [
                         dcc.Graph(id='pie_graph')
                     ],
-                    className='pretty_container seven columns',
+                    className='pretty_container four columns',
                 ),
                 html.Div(
                     [
                         dcc.Graph(id='aggregate_graph')
                     ],
-                    className='pretty_container five columns',
+                    className='pretty_container eight columns',
                 ),
             ],
             className='row'
@@ -309,9 +309,9 @@ def make_main_figure(operator_selected, dayofweek, start_date,end_date):
                         template='none',
                         paper_bgcolor='#fafafa',
                         plot_bgcolor='#fafafa',
-                        margin=dict(l=50, r=40, t=50, b=40)
+                        margin=dict(l=50, r=40, t=70, b=70)
                         )
-    fig.update_traces(marker_color= 'indigo')
+    fig.update_traces(marker_color= 'tomato')
     fig.update_xaxes(title_text="Date")
     fig.update_yaxes(title_text="number of Flights")
     return fig
@@ -334,7 +334,6 @@ def make_week_figure(operator_selected, dayofweek, start_date,end_date):
     #fig.update_xaxes(title_text="Day of Week")
     #fig.update_yaxes(title_text="Number of flights")
     fig = px.bar(df_graph, x='WeekNumber', y='NumberPlanes', text='NumberPlanes')
-    fig.update_traces(texttemplate='%{text:.2s}', textposition='outside', marker_color= 'seaGreen')
     fig.update_layout(title_text = "Number of flights per week", 
                         title_x=0.5,
                         uniformtext_minsize=8, 
@@ -342,8 +341,11 @@ def make_week_figure(operator_selected, dayofweek, start_date,end_date):
                         template='none', 
                         paper_bgcolor='#fafafa',
                         plot_bgcolor='#fafafa', 
-                        margin=dict(l=50, r=40, t=50, b=40)
+                        margin=dict(l=50, r=40, t=70, b=70)
                         )
+    fig.update_traces(texttemplate='%{text:.2s}', 
+                        textposition='outside', 
+                        marker_color= 'seaGreen')
     fig.update_xaxes(dtick=1)
 
     return fig
@@ -372,11 +374,11 @@ def make_hour_figure(operator_selected, dayofweek, start_date,end_date):
                         template='none', 
                         paper_bgcolor='#fafafa',
                         plot_bgcolor='#fafafa', 
-                        margin=dict(l=50, r=40, t=50, b=40)
+                        margin=dict(l=50, r=40, t=70, b=70)
                         )
     fig.update_traces(texttemplate='%{text:.2s}',
                         textposition='outside',
-                        marker_color= 'orangeRed'
+                        marker_color= 'indigo'
                         )
     fig.update_xaxes(title_text="Hour of the day")
     fig.update_yaxes(title_text="Number of flights")
@@ -400,17 +402,26 @@ def make_dayofweek_figure(operator_selected, dayofweek, start_date,end_date):
     print(df_graph)
     #print(test)
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=test['DayOfWeek'], y=test['NumberPlanes'], name='NumberPlanes'))
-    fig.update_layout(title_text = "Average number of flights for each day of the week", title_x=0.5)
-    fig.update_xaxes(title_text="Day of the Week")
-    fig.update_yaxes(title_text="Number of flights")
+    fig.add_trace(go.Bar(x=test['NumberPlanes'], y=test['DayOfWeek'], orientation='h'))
+    fig.update_layout(title_text = "Average number of flights for each hour of the day", 
+                        title_x=0.5,
+                        uniformtext_minsize=8, 
+                        uniformtext_mode='hide', 
+                        template='none', 
+                        paper_bgcolor='#fafafa',
+                        plot_bgcolor='#fafafa', 
+                        margin=dict(l=80, r=80, t=70, b=70)
+                        )
+    fig.update_traces(textposition='outside',
+                        marker_color= 'lightSeaGreen'
+                        )
+    fig.update_xaxes(title_text="Number of flights")
 
     return fig
 
-
 #Main
 #if __name__ == '__main__':
-#   app.server.run(debug=True,port = 50004)
+#  app.server.run(debug=True,port = 50004)
 
 if __name__ == '__main__':
     app.server.run(debug=True,port = 50004,host='192.168.1.156') 
