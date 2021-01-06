@@ -24,7 +24,18 @@ df['Date'] = pd.to_datetime(df['Date'])
 df['DayOfWeek']=df['Date'].dt.day_name()
 df['WeekNumber']=df['Date'].dt.week
 
+
+# Weekdays
+weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+df['Hour'] = pd.to_numeric(df['Hour'], errors = 'coerce')
+#.fillna(0.0).astype(int)
+
+print(df.Hour.unique())
+
 print(df)
+
+print(df.loc[(df.Hour == 'False')])
 
 monday_means = (df.loc[(df.DayOfWeek == 'Monday')]
                 .mean()
@@ -32,28 +43,22 @@ monday_means = (df.loc[(df.DayOfWeek == 'Monday')]
            
 try_means = (df.groupby([df['DayOfWeek']]).mean())
 
-print(monday_means)
-print(try_means)
-
 #df_test = df.groupby([df['dayOfWeek']]).count()
 #print(df_test)
 #print(df.value_counts(['dayOfWeek']))
 #print(df.groupby([df['dayOfWeek']]).sum().reset_index())
 
-
 start_date = min(df['Date'])
 end_date = max(df['Date']) 
 
-print(df.loc[(df['NumberPlanes'] > 1000)])
+start_date = dt.date(2020,8,1)
+end_date = dt.date(2020,10,31)
 
 # Operator option 
 operator_options = df.Operator.unique()
 
 #Manufacturer options
 Manufacturer_options = df.Manufacturer.unique()
-
-#test = df.groupby([df['Date']]).sum().reset_index()
-#print(test)
 
 # Create the app
 app = dash.Dash(__name__)
@@ -164,7 +169,10 @@ app.layout = html.Div(
                 ),
                 html.Div(
                     [
-                        dcc.Graph(id='individual_graph')
+                        
+                        dcc.Graph(
+                            id='individual_graph'
+                            )
                     ],
                     className='pretty_container five columns',
                 ),
@@ -228,6 +236,7 @@ def make_main_figure(operator_selected, start_date,end_date):
     return fig
 
 
+
 @app.callback(Output('main_graph', 'figure'),
               [Input('operator_dropdown', 'value'),
               Input('date_picker_range', 'start_date'),
@@ -235,14 +244,13 @@ def make_main_figure(operator_selected, start_date,end_date):
 def make_weekday_figure(operator_selected, start_date,end_date):
 
     print('---------------- im in the second callback --------------------')
-    weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     dff = filter_dataframe(df, operator_selected, start_date, end_date)
-    df_graph = dff.groupby([dff['WeekNumber']]).sum().reset_index()
+    df_graph = dff.groupby([dff['DayOfWeek']]).mean().reset_index()
+    df_graph['DayOfWeek'] = pd.Categorical(df_graph['DayOfWeek'], categories= weekdays)
+    df_graph = df_graph.sort_values('DayOfWeek')
     print(df_graph)
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=df_graph['WeekNumber'], y=df_graph['NumberPlanes'],
-                                
-                                 name='NumberPlanes'))
+    fig.add_trace(go.Bar(x=df_graph['DayOfWeek'], y=df_graph['NumberPlanes'],name='NumberPlanes'))
     fig.update_layout(title_text = "Average number of flights for each day of the week")
     fig.update_xaxes(title_text="Day of Week")
     fig.update_yaxes(title_text="Number of flights")
@@ -257,12 +265,39 @@ def make_hour_figure(operator_selected, start_date,end_date):
 
     print('---------------- im in the third callback --------------------')
     dff = filter_dataframe(df, operator_selected, start_date, end_date)
-    df_graph = dff.groupby([dff['Hour']]).mean().reset_index()
+    df_graph = dff.groupby(['WeekNumber','DayOfWeek','Hour']).sum()
     print(df_graph)
+    test = df_graph.groupby(['Hour']).mean().reset_index()
+    #test['Hour'] = pd.Categorical(test['Hour'], categories= [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
+    #test = test.sort_values('Hour')
+    print(test)
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=df_graph['Hour'], y=df_graph['NumberPlanes'], name='NumberPlanes'))
+    fig.add_trace(go.Bar(x=test['Hour'], y=test['NumberPlanes'], name='NumberPlanes'))
     fig.update_layout(title_text = "Average number of flights for each hour of the day")
     fig.update_xaxes(title_text="Hour of the day")
+    fig.update_yaxes(title_text="Number of flights")
+
+    return fig
+
+
+@app.callback(Output('pie_graph', 'figure'),
+              [Input('operator_dropdown', 'value'),
+              Input('date_picker_range', 'start_date'),
+              Input('date_picker_range', 'end_date')])
+def make_week_figure(operator_selected, start_date,end_date):
+
+    print('---------------- im in the third callback --------------------')
+    dff = filter_dataframe(df, operator_selected, start_date, end_date)
+    df_graph = dff.groupby(['WeekNumber','DayOfWeek']).sum().reset_index()
+    test = df_graph.groupby('DayOfWeek').mean().reset_index()
+    test['DayOfWeek'] = pd.Categorical(test['DayOfWeek'], categories= weekdays)
+    test = test.sort_values('DayOfWeek')
+    print(df_graph)
+    print(test)
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=test['DayOfWeek'], y=test['NumberPlanes'], name='NumberPlanes'))
+    fig.update_layout(title_text = "Average number of flights for each day of the week")
+    fig.update_xaxes(title_text="Day of the Week")
     fig.update_yaxes(title_text="Number of flights")
 
     return fig
