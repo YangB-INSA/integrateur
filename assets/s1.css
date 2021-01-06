@@ -127,7 +127,7 @@ body {
 }
 .pretty_container {
   border-radius: 5px;
-  background-color: #F9F9F9;
+  background-color: #fafafa;
   margin: 10px;
   padding: 15px;
   position: relative;
@@ -139,8 +139,8 @@ body {
   padding: 0 0 0 0;
 }
 
-.data_text {
-    font-size;
+.info_text {
+    font-weight:bold;
 }
 
 .dcc_control {

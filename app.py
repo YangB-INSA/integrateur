@@ -18,20 +18,16 @@ import plotly.graph_objs as go
 
 # Load data
 df = pd.read_csv('data/data-plane.csv', sep='\t', header = None, error_bad_lines=False)
+
 df = df.drop(df.columns[[0]], axis=1)
 df.columns = ['Date','Hour','Manufacturer','Model','Operator','NumberPlanes']
 df['Date'] = pd.to_datetime(df['Date'])
 df['DayOfWeek']=df['Date'].dt.day_name()
 df['WeekNumber']=df['Date'].dt.week
-
 df['Hour'] = pd.to_numeric(df['Hour'], errors = 'coerce')
-#.fillna(0.0).astype(int)
 
 start_date = min(df['Date'])
 end_date = max(df['Date']) 
-
-#start_date = dt.date(2020,8,1)
-#end_date = dt.date(2020,10,31)
 
 # Operator option 
 operator_options = df.Operator.unique()
@@ -154,7 +150,8 @@ app.layout = html.Div(
                                         ),
                                         html.P("No. of operators"),
                                     ],                       
-                                    className="pretty_container four columns"
+                                    className="pretty_container four columns",
+                                    style = {'text-align':'center'}
                                 ),
 
                                 html.Div(
@@ -165,7 +162,8 @@ app.layout = html.Div(
                                         ),
                                         html.P("No. of flights"),
                                     ],
-                                    className="pretty_container four columns"
+                                    className="pretty_container four columns",
+                                    style = {'text-align':'center'}
                                 ),
 
                                 html.Div(
@@ -176,7 +174,8 @@ app.layout = html.Div(
                                         ),
                                         html.P("No. of days"),
                                     ],
-                                    className="pretty_container four columns"
+                                    className="pretty_container four columns",
+                                    style = {'text-align':'center'}
                                 ),
                                          
                             ],
@@ -304,10 +303,15 @@ def make_main_figure(operator_selected, dayofweek, start_date,end_date):
     df_graph = dff.groupby([dff['Date']]).sum().reset_index()
     #print(df_graph)
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df_graph['Date'], y=df_graph['NumberPlanes'],
-                                 mode='lines+markers',
-                                 name='NumberPlanes'))
-    fig.update_layout(title_text = "Number of flights per date")
+    fig.add_trace(go.Scatter(x=df_graph['Date'], y=df_graph['NumberPlanes'],mode='lines', name='NumberPlanes'))
+    fig.update_layout(title_text = "Number of flights per date", 
+                        title_x=0.5, 
+                        template='none',
+                        paper_bgcolor='#fafafa',
+                        plot_bgcolor='#fafafa',
+                        margin=dict(l=50, r=40, t=50, b=40)
+                        )
+    fig.update_traces(marker_color= 'indigo')
     fig.update_xaxes(title_text="Date")
     fig.update_yaxes(title_text="number of Flights")
     return fig
@@ -324,11 +328,23 @@ def make_week_figure(operator_selected, dayofweek, start_date,end_date):
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
     df_graph = dff.groupby([dff['WeekNumber']]).sum().reset_index()
     #print(df_graph)
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=df_graph['WeekNumber'], y=df_graph['NumberPlanes'],name='NumberPlanes'))
-    fig.update_layout(title_text = "Average number of flights for each week of the year")
-    fig.update_xaxes(title_text="Day of Week")
-    fig.update_yaxes(title_text="Number of flights")
+    #fig = go.Figure()
+    #fig.add_trace(go.Bar(x=df_graph['WeekNumber'], y=df_graph['NumberPlanes'],name='NumberPlanes'))
+    #fig.update_layout(title_text = "Average number of flights for each week of the year", title_x=0.5)
+    #fig.update_xaxes(title_text="Day of Week")
+    #fig.update_yaxes(title_text="Number of flights")
+    fig = px.bar(df_graph, x='WeekNumber', y='NumberPlanes', text='NumberPlanes')
+    fig.update_traces(texttemplate='%{text:.2s}', textposition='outside', marker_color= 'seaGreen')
+    fig.update_layout(title_text = "Number of flights per week", 
+                        title_x=0.5,
+                        uniformtext_minsize=8, 
+                        uniformtext_mode='hide', 
+                        template='none', 
+                        paper_bgcolor='#fafafa',
+                        plot_bgcolor='#fafafa', 
+                        margin=dict(l=50, r=40, t=50, b=40)
+                        )
+    fig.update_xaxes(dtick=1)
 
     return fig
 
@@ -344,13 +360,24 @@ def make_hour_figure(operator_selected, dayofweek, start_date,end_date):
     print(dff)
     df_graph = dff.groupby(['WeekNumber','DayOfWeek','Hour']).sum().reset_index()
     print(df_graph)
-    test = df_graph.groupby(['Hour']).mean().reset_index()
-    #test['Hour'] = pd.Categorical(test['Hour'], categories= [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
-    #test = test.sort_values('Hour')
-    print(test)
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=test['Hour'], y=test['NumberPlanes'], name='NumberPlanes'))
-    fig.update_layout(title_text = "Average number of flights for each hour of the day")
+    df_hour = df_graph.groupby(['Hour']).mean().reset_index()
+    print(df_hour)
+    #fig = go.Figure()
+    #fig.add_trace(go.Bar(x=test['Hour'], y=test['NumberPlanes'], name='NumberPlanes',color=test['Hour']))
+    fig = px.bar(df_hour, x='Hour', y='NumberPlanes', text='NumberPlanes')
+    fig.update_layout(title_text = "Average number of flights for each hour of the day", 
+                        title_x=0.5,
+                        uniformtext_minsize=8, 
+                        uniformtext_mode='hide', 
+                        template='none', 
+                        paper_bgcolor='#fafafa',
+                        plot_bgcolor='#fafafa', 
+                        margin=dict(l=50, r=40, t=50, b=40)
+                        )
+    fig.update_traces(texttemplate='%{text:.2s}',
+                        textposition='outside',
+                        marker_color= 'orangeRed'
+                        )
     fig.update_xaxes(title_text="Hour of the day")
     fig.update_yaxes(title_text="Number of flights")
 
@@ -374,16 +401,16 @@ def make_dayofweek_figure(operator_selected, dayofweek, start_date,end_date):
     #print(test)
     fig = go.Figure()
     fig.add_trace(go.Bar(x=test['DayOfWeek'], y=test['NumberPlanes'], name='NumberPlanes'))
-    fig.update_layout(title_text = "Average number of flights for each day of the week")
+    fig.update_layout(title_text = "Average number of flights for each day of the week", title_x=0.5)
     fig.update_xaxes(title_text="Day of the Week")
     fig.update_yaxes(title_text="Number of flights")
 
     return fig
 
 
-# Main
+#Main
 #if __name__ == '__main__':
-#    app.server.run(debug=True,port = 50004)
+#   app.server.run(debug=True,port = 50004)
 
 if __name__ == '__main__':
     app.server.run(debug=True,port = 50004,host='192.168.1.156') 
