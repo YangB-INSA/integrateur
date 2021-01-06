@@ -17,7 +17,7 @@ import plotly.express as px
 import plotly.graph_objs as go
 
 # Load data
-df = pd.read_csv('data/data-plane.csv', sep=',', header = None, error_bad_lines=False)
+df = pd.read_csv('data/data-plane.csv', sep='\t', header = None, error_bad_lines=False)
 df = df.drop(df.columns[[0]], axis=1)
 df.columns = ['Date','Hour','Manufacturer','Model','Operator','NumberPlanes']
 df['Date'] = pd.to_datetime(df['Date'])
@@ -30,8 +30,8 @@ df['Hour'] = pd.to_numeric(df['Hour'], errors = 'coerce')
 start_date = min(df['Date'])
 end_date = max(df['Date']) 
 
-start_date = dt.date(2020,8,1)
-end_date = dt.date(2020,10,31)
+#start_date = dt.date(2020,8,1)
+#end_date = dt.date(2020,10,31)
 
 # Operator option 
 operator_options = df.Operator.unique()
@@ -382,5 +382,8 @@ def make_dayofweek_figure(operator_selected, dayofweek, start_date,end_date):
 
 
 # Main
+#if __name__ == '__main__':
+#    app.server.run(debug=True,port = 50004)
+
 if __name__ == '__main__':
-    app.server.run(debug=True,port = 50004)
+    app.server.run(debug=True,port = 50004,host='192.168.1.156') 
