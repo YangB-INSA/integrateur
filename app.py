@@ -1,15 +1,9 @@
 # Import required libraries
-import os
-import pickle
-import copy
-import datetime as dt
-import math
 
-import requests
+import datetime as dt
 import pandas as pd
-from flask import Flask
 import dash
-import numpy as np
+import dash_table
 from dash.dependencies import Input, Output, State
 import dash_core_components as dcc
 import dash_html_components as html
@@ -19,18 +13,17 @@ import plotly.graph_objs as go
 # Load data
 df = pd.read_csv('data/data-plane.csv', sep='\t', header = None, error_bad_lines=False)
 
+# Some cleaning and edit on the dataset 
 df = df.drop(df.columns[[0]], axis=1)
-df.columns = ['Date','Hour','Manufacturer','Model','Operator','NumberPlanes']
+df.columns = ['Date','Hour','Manufacturer','Model','Operator','NumberFlights']
 df['Date'] = pd.to_datetime(df['Date'])
 df['DayOfWeek']=df['Date'].dt.day_name()
 df['WeekNumber']=df['Date'].dt.week
 df['Hour'] = pd.to_numeric(df['Hour'], errors = 'coerce')
 
+# Range of the calendar
 start_date = min(df['Date'])
 end_date = max(df['Date']) 
-
-
-print(df.groupby(['Operator']).sum().reset_index())
 
 # Operator option 
 operator_options = df.Operator.unique()
@@ -48,7 +41,6 @@ server = app.server
 # Create app layout
 app.layout = html.Div(
     [
-        dcc.Store(id='aggregate_data'),
         html.Div(
             [
                 html.Img(
@@ -185,12 +177,11 @@ app.layout = html.Div(
                             id="infoContainer",
                             className="row",
                             style = {'display':'flex', 'align-items': 'center'}
-                        ),
-                        #print : total nb of operator, total nb of flights, nb of day on the period 
+                        ), 
                         html.Div(
                             [
                                 dcc.Graph(
-                                    id='nb_flights_graph',
+                                    id='total_graph',
                                 )
                             ],
                             id="countGraphContainer",
@@ -208,7 +199,7 @@ app.layout = html.Div(
                 html.Div(
                     [
                         dcc.Graph(
-                            id='main_graph',
+                            id='week_graph',
                         )
                     ],
                     className='pretty_container seven columns',
@@ -217,7 +208,7 @@ app.layout = html.Div(
                     [ 
                         
                         dcc.Graph(
-                            id='individual_graph'
+                            id='hour_graph'
                             )
                     ],
                     className='pretty_container five columns',
@@ -229,21 +220,27 @@ app.layout = html.Div(
             [
                 html.Div(
                     [
-                        dcc.Graph(id='pie_graph')
+                        dcc.Graph(id='weekday_graph')
                     ],
                     className='pretty_container four columns',
                 ),
                 html.Div(
                     [
-                        dcc.Graph(id='table_graph')
+                        html.H4(
+                            'Operators of the french air traffic',
+                            className = 'title',
+                        ),
+                        dash_table.DataTable(
+                            id='data_table',
+                            columns=[
+                                {"name": i, "id": i} for i in ['Operator','Total No. of flights','Most used aircraft','Favorite manufacturer']
+                            ],
+                            page_current=0,
+                            page_action='native',
+                            page_size=10,
+                        )
                     ],
-                    className='pretty_container four columns',
-                ),
-                html.Div(
-                    [
-                        dcc.Graph(id='aggregate_graph')
-                    ],
-                    className='pretty_container four columns',
+                    className='pretty_container eight columns',
                 ),
             ],
             className='row'
@@ -267,6 +264,7 @@ def filter_dataframe(df, operator_options, dayofweek, start_date, end_date):
 
 # Create callbacks
 
+# make texts above main_figure
 @app.callback(Output('nb_operator', 'children'),
               [Input('operator_dropdown', 'value'),
               Input('day_dropdown','value'),
@@ -286,7 +284,7 @@ def update_operator_text(operator_selected, dayofweek, start_date,end_date):
 def update_flights_text(operator_selected, dayofweek, start_date,end_date):
 
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
-    nb_flights = dff['NumberPlanes'].sum()
+    nb_flights = dff['NumberFlights'].sum()
     return nb_flights
 
 @app.callback(Output('nb_days', 'children'),
@@ -300,7 +298,9 @@ def update_day_text(operator_selected, dayofweek, start_date,end_date):
     nb = dff.Date.unique().shape
     return nb
 
-@app.callback(Output('nb_flights_graph', 'figure'),
+
+# callback for main_figure
+@app.callback(Output('total_graph', 'figure'),
               [Input('operator_dropdown', 'value'),
               Input('day_dropdown','value'),
               Input('date_picker_range', 'start_date'),
@@ -310,9 +310,10 @@ def make_main_figure(operator_selected, dayofweek, start_date,end_date):
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
     df_graph = dff.groupby([dff['Date']]).sum().reset_index()
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df_graph['Date'], y=df_graph['NumberPlanes'],mode='lines', name='NumberPlanes'))
+    fig.add_trace(go.Scatter(x=df_graph['Date'], y=df_graph['NumberFlights'],mode='lines', name='NumberFlights'))
     fig.update_layout(title_text = "Number of flights per date", 
-                        title_x=0.5, 
+                        title_x=0.5,
+                        title_font_size=18, 
                         template='none',
                         paper_bgcolor='#fafafa',
                         plot_bgcolor='#fafafa',
@@ -323,7 +324,9 @@ def make_main_figure(operator_selected, dayofweek, start_date,end_date):
     fig.update_yaxes(title_text="number of Flights")
     return fig
 
-@app.callback(Output('main_graph', 'figure'),
+
+# callback for week_figure
+@app.callback(Output('week_graph', 'figure'),
               [Input('operator_dropdown', 'value'),
               Input('day_dropdown','value'),
               Input('date_picker_range', 'start_date'),
@@ -332,15 +335,10 @@ def make_week_figure(operator_selected, dayofweek, start_date,end_date):
 
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
     df_graph = dff.groupby([dff['WeekNumber']]).sum().reset_index()
-    #print(df_graph)
-    #fig = go.Figure()
-    #fig.add_trace(go.Bar(x=df_graph['WeekNumber'], y=df_graph['NumberPlanes'],name='NumberPlanes'))
-    #fig.update_layout(title_text = "Average number of flights for each week of the year", title_x=0.5)
-    #fig.update_xaxes(title_text="Day of Week")
-    #fig.update_yaxes(title_text="Number of flights")
-    fig = px.bar(df_graph, x='WeekNumber', y='NumberPlanes', text='NumberPlanes')
+    fig = px.bar(df_graph, x='WeekNumber', y='NumberFlights', text='NumberFlights')
     fig.update_layout(title_text = "Number of flights per week", 
                         title_x=0.5,
+                        title_font_size=18,
                         uniformtext_minsize=8, 
                         uniformtext_mode='hide', 
                         template='none', 
@@ -351,11 +349,13 @@ def make_week_figure(operator_selected, dayofweek, start_date,end_date):
     fig.update_traces(texttemplate='%{text:.2s}', 
                         textposition='outside', 
                         marker_color= 'seaGreen')
-    fig.update_xaxes(dtick=1)
+    fig.update_yaxes(title_text="Number of flights")
+    fig.update_xaxes(title_text="No. of the week")
 
     return fig
 
-@app.callback(Output('individual_graph', 'figure'),
+# callback for hour_figure
+@app.callback(Output('hour_graph', 'figure'),
               [Input('operator_dropdown', 'value'),
               Input('day_dropdown','value'),
               Input('date_picker_range', 'start_date'),
@@ -364,12 +364,11 @@ def make_hour_figure(operator_selected, dayofweek, start_date,end_date):
 
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
     df_graph = dff.groupby(['WeekNumber','DayOfWeek','Hour']).sum().reset_index()
-    df_hour = df_graph.groupby(['Hour']).mean().reset_index()
-    #fig = go.Figure()
-    #fig.add_trace(go.Bar(x=test['Hour'], y=test['NumberPlanes'], name='NumberPlanes',color=test['Hour']))
-    fig = px.bar(df_hour, x='Hour', y='NumberPlanes', text='NumberPlanes')
+    df_hour = df_graph.groupby(['Hour']).mean().reset_index().round(decimals=2)
+    fig = px.bar(df_hour, x='Hour', y='NumberFlights', text='NumberFlights')
     fig.update_layout(title_text = "Average number of flights for each hour of the day", 
                         title_x=0.5,
+                        title_font_size=18,
                         uniformtext_minsize=8, 
                         uniformtext_mode='hide', 
                         template='none', 
@@ -381,13 +380,13 @@ def make_hour_figure(operator_selected, dayofweek, start_date,end_date):
                         textposition='outside',
                         marker_color= 'indigo'
                         )
-    fig.update_xaxes(title_text="Hour of the day")
+    fig.update_xaxes(dtick=1,title_text="Hour of the day")
     fig.update_yaxes(title_text="Number of flights")
 
     return fig
 
-
-@app.callback(Output('pie_graph', 'figure'),
+# callback for weekday_figure
+@app.callback(Output('weekday_graph', 'figure'),
               [Input('operator_dropdown', 'value'),
               Input('day_dropdown','value'),
               Input('date_picker_range', 'start_date'),
@@ -396,26 +395,44 @@ def make_dayofweek_figure(operator_selected, dayofweek, start_date,end_date):
 
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
     df_graph = dff.groupby(['WeekNumber','DayOfWeek']).sum().reset_index()
-    test = df_graph.groupby('DayOfWeek').mean().reset_index()
-    test['DayOfWeek'] = pd.Categorical(test['DayOfWeek'], categories= weekdays)
-    test = test.sort_values('DayOfWeek')
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=test['NumberPlanes'], y=test['DayOfWeek'], orientation='h'))
-    fig.update_layout(title_text = "Average number of flights for each hour of the day", 
+    test = df_graph.groupby('DayOfWeek').mean().reset_index().round(decimals=2)
+    #test['DayOfWeek'] = pd.Categorical(test['DayOfWeek'], categories= weekdays)
+    #test = test.sort_values('DayOfWeek')
+    fig = px.pie(test, values='NumberFlights', names='DayOfWeek', title='Average Number of flights per weekday')
+    fig.update_traces(textposition='inside', textinfo='percent+label',textfont_size=15)
+    fig.update_layout(title_text = "Average number of flights for each day", 
                         title_x=0.5,
+                        title_font_size=18,
                         uniformtext_minsize=8, 
                         uniformtext_mode='hide', 
                         template='none', 
                         paper_bgcolor='#fafafa',
                         plot_bgcolor='#fafafa', 
-                        margin=dict(l=80, r=80, t=70, b=70)
+                        margin=dict(l=80, r=80, t=70, b=70),
+                        showlegend=False
                         )
-    fig.update_traces(textposition='outside',
-                        marker_color= 'lightSeaGreen'
-                        )
-    fig.update_xaxes(title_text="Number of flights")
 
     return fig
+
+# callback for data_table
+@app.callback(Output('data_table', 'data'),
+              [Input('operator_dropdown', 'value'),
+              Input('day_dropdown','value'),
+              Input('date_picker_range', 'start_date'),
+              Input('date_picker_range', 'end_date')])
+def make_data_table(operator_selected, dayofweek, start_date,end_date):
+
+    dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
+    df_ope = dff.groupby(['Operator'])[['NumberFlights']].sum().sort_values(by=['NumberFlights'],ascending=False)
+    df_model = dff.groupby(['Operator','Model'])[['NumberFlights']].sum().sort_values(by=['NumberFlights'],ascending=False).reset_index()
+    df_manuf = dff.groupby(['Operator','Manufacturer'])[['NumberFlights']].sum().sort_values(by=['NumberFlights'],ascending=False).reset_index()
+    df_model = df_model.drop_duplicates(subset='Operator').set_index('Operator')
+    df_manuf = df_manuf.drop_duplicates(subset='Operator').set_index('Operator')
+    df_final = df_ope.join(df_model['Model']).join(df_manuf['Manufacturer']).reset_index()
+    df_final.columns = ['Operator','Total No. of flights','Most used aircraft','Favorite manufacturer']
+    data = df_final.to_dict('records')
+
+    return data
 
 #Main
 #if __name__ == '__main__':

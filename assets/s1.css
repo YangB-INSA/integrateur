@@ -157,6 +157,9 @@ body {
   width: calc(100%-40px);
 }
 
+.title {
+  margin-bottom:20px
+}
 .rc-slider {
   margin-left: 0px;
   padding-left: 0px;
