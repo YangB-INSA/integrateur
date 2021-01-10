@@ -11,4 +11,4 @@ then just go the the root of the folder, and use :
 
 python app.py
 
-it will run on port 50004.
+it will run on port 50004.test
