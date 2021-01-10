@@ -97,9 +97,9 @@ app.layout = html.Div(
                         dcc.RadioItems(
                             id='day_selector',
                             options=[
-                                {'label': 'All ', 'value': 'all'},
-                                {'label': 'Active only ', 'value': 'active'},
-                                {'label': 'Customize ', 'value': 'custom'}
+                                {'label': 'All', 'value': 'all'},
+                                {'label': 'Customized ', 'value': 'customized'},
+                                {'label': 'None ', 'value': 'none'},
                             ],
                             value='all',
                             labelStyle={'display': 'inline-block'},
@@ -117,11 +117,11 @@ app.layout = html.Div(
                             className="control_label"
                         ),
                         dcc.RadioItems(
-                            id='operator_status_selector',
+                            id='operator_selector',
                             options=[
-                                {'label': 'All ', 'value': 'all'},
-                                {'label': 'Active only ', 'value': 'active'},
-                                {'label': 'Customize ', 'value': 'custom'}
+                                {'label': 'All', 'value': 'all'},
+                                {'label': 'Customized ', 'value': 'customized'},
+                                {'label': 'None ', 'value': 'none'},
                             ],
                             value='all',
                             labelStyle={'display': 'inline-block'},
@@ -303,6 +303,52 @@ def update_day_text(operator_selected, dayofweek, start_date,end_date):
     nb = dff.Date.unique().shape
     return nb
 
+# Radio -> multi
+@app.callback(Output('day_dropdown', 'value'),
+              [Input('day_selector', 'value')],
+              [State('day_dropdown','value')])
+def day_value(selector,prev_value):
+    if selector == 'all':
+        return weekdays
+    elif selector == 'none':
+        return []
+    else:
+        return prev_value
+
+
+# Radio -> multi
+@app.callback(Output('operator_dropdown', 'value'),
+              [Input('operator_selector', 'value')],
+              [State('operator_dropdown','value')])
+def operator_value(selector,prev_value):
+    if selector == 'all':
+        return operator_options
+    elif selector == 'none':
+        return []
+    else:
+        return prev_value
+
+# Radio -> multi
+@app.callback(Output('day_selector', 'value'),
+              [Input('day_dropdown', 'value')])
+def day_radio_value(dropdown):
+    if dropdown == weekdays:
+        return 'all'
+    elif dropdown == []:
+        return 'none'
+    else:
+        return 'customized'
+
+# Radio -> multi
+@app.callback(Output('operator_selector', 'value'),
+              [Input('operator_dropdown', 'value')])
+def operator_radio_value(dropdown):
+    if dropdown == operator_options:
+        return 'all'
+    elif dropdown == []:
+        return 'none'
+    else:
+        return 'customized'
 
 # callback for main_figure
 @app.callback(Output('total_graph', 'figure'),
