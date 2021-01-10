@@ -13,10 +13,10 @@ import plotly.graph_objs as go
 # Load data
 
 #for local use
-df = pd.read_csv('data/data-plane.csv', sep='\t', header = None, error_bad_lines=False)
+#df = pd.read_csv('data/data-plane.csv', sep='\t', header = None, error_bad_lines=False)
 
 #for VM use 
-#df = pd.read_csv('~/var/lib/jenkins/workspace/Microservice_Analyse/src/app/out/data-plane.csv', sep='\t', header = None, error_bad_lines=False)
+df = pd.read_csv('~/var/lib/jenkins/workspace/Microservice_Analyse/src/app/out/data-plane.csv', sep='\t', header = None, error_bad_lines=False)
 
 # Some cleaning and edit on the dataset 
 df = df.drop(df.columns[[0]], axis=1)
@@ -371,7 +371,7 @@ def make_hour_figure(operator_selected, dayofweek, start_date,end_date):
     df_graph = dff.groupby(['WeekNumber','DayOfWeek','Hour']).sum().reset_index()
     df_hour = df_graph.groupby(['Hour']).mean().reset_index().round(decimals=2)
     fig = px.bar(df_hour, x='Hour', y='NumberFlights', text='NumberFlights')
-    fig.update_layout(title_text = "Average number of flights for each hour of the day", 
+    fig.update_layout(title_text = "Average number of flights per hour of the day", 
                         title_x=0.5,
                         title_font_size=18,
                         uniformtext_minsize=8, 
@@ -405,7 +405,7 @@ def make_dayofweek_figure(operator_selected, dayofweek, start_date,end_date):
     #test = test.sort_values('DayOfWeek')
     fig = px.pie(test, values='NumberFlights', names='DayOfWeek', title='Average Number of flights per weekday')
     fig.update_traces(textposition='inside', textinfo='percent+label',textfont_size=15)
-    fig.update_layout(title_text = "Average number of flights for each day", 
+    fig.update_layout(title_text = "Proportion per day of the french air traffic in a week", 
                         title_x=0.5,
                         title_font_size=18,
                         uniformtext_minsize=8, 
