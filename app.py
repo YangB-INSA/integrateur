@@ -15,6 +15,7 @@ import plotly.graph_objs as go
 #for local use
 #df = pd.read_csv('data/data-plane.csv', sep='\t', header = None, error_bad_lines=False)
 
+
 #for VM use 
 df = pd.read_csv('~/var/lib/jenkins/workspace/Microservice_Analyse/src/app/out/data-plane.csv', sep='\t', header = None, error_bad_lines=False)
 
@@ -447,8 +448,6 @@ def make_dayofweek_figure(operator_selected, dayofweek, start_date,end_date):
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
     df_graph = dff.groupby(['WeekNumber','DayOfWeek']).sum().reset_index()
     test = df_graph.groupby('DayOfWeek').mean().reset_index().round(decimals=2)
-    #test['DayOfWeek'] = pd.Categorical(test['DayOfWeek'], categories= weekdays)
-    #test = test.sort_values('DayOfWeek')
     fig = px.pie(test, values='NumberFlights', names='DayOfWeek', title='Average Number of flights per weekday')
     fig.update_traces(textposition='inside', textinfo='percent+label',textfont_size=15)
     fig.update_layout(title_text = "Proportion per day of the french air traffic in a week", 
