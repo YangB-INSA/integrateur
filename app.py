@@ -17,7 +17,8 @@ import plotly.graph_objs as go
 
 
 #for VM use 
-df = pd.read_csv('/workspace/Microservice_Analyse/src/app/out/data-plane.csv', sep='\t', header = None, error_bad_lines=False)
+#df = pd.read_csv('/workspace/Microservice_Analyse/src/app/out/data-plane.csv', sep='\t', header = None, error_bad_lines=False)
+df = pd.read_csv('/var/lib/jenkins/workspace/Microservice_Analyse/src/app/out/data-plane.csv', sep='\t', header = None, error_bad_lines=False)
 
 # Some cleaning and edit on the dataset 
 df = df.drop(df.columns[[0]], axis=1)
