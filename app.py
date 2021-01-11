@@ -58,7 +58,7 @@ app.layout = html.Div(
                             'Data Visualisation of the French Air Traffic',
                         ),
                         html.H6(
-                            'Made by Axolotl',
+                            'Made by Axolotl Team',
                         )
                     ],
                     className='eight columns',
