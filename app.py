@@ -59,10 +59,16 @@ app.layout = html.Div(
                         ),
                         html.H6(
                             'Made by Axolotl Team',
-                        )
+                        ),
+                        html.H6(
+                            html.A(
+                                'Go to the Autoencoder Interface',
+                                href = 'http://192.168.37.106:50001/ae_interface',
+                            )
+                        ),
                     ],
                     className='eight columns',
-                    style = {'text-align':'center'},
+                    style = {'text-align':'center', 'margin-bottom':'30px'},
                 ),
                 html.Img(
                     src=app.get_asset_url('logos.png'),
