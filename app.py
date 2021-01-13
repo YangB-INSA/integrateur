@@ -321,7 +321,6 @@ def day_value(selector,prev_value):
     else:
         return prev_value
 
-
 # Radio -> multi
 @app.callback(Output('operator_dropdown', 'value'),
               [Input('operator_selector', 'value')],
