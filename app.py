@@ -21,6 +21,9 @@ df = pd.read_csv('/var/lib/jenkins/workspace/Microservice_Analyse/src/app/out/da
 # Some cleaning and edit on the dataset 
 df = df.drop(df.columns[[0]], axis=1)
 df.columns = ['Date','Hour','Manufacturer','Model','Operator','NumberFlights']
+
+print(df)
+
 df['Date'] = pd.to_datetime(df['Date'])
 df['DayOfWeek']=df['Date'].dt.day_name()
 df['WeekNumber']=df['Date'].dt.week
@@ -29,6 +32,14 @@ df['Hour'] = pd.to_numeric(df['Hour'], errors = 'coerce')
 # Range of the calendar
 start_date = min(df['Date'])
 end_date = max(df['Date']) 
+
+# First french lockdown date
+start_lockdown_1 = dt.datetime(2020,3,17)
+end_lockdown_1 = dt.datetime(2020,5,11)
+
+# Second french lockdown date
+start_lockdown_2 = dt.datetime(2020,10,30)
+end_lockdown_2 =dt.datetime(2020,12,15)
 
 # Operator option 
 operator_options = df.Operator.unique()
@@ -64,6 +75,7 @@ app.layout = html.Div(
                             html.A(
                                 'Go to the Autoencoder Interface',
                                 href = 'http://192.168.37.106:50001/ae_interface',
+                                style={'text-decoration':'none'}
                             )
                         ),
                     ],
@@ -365,17 +377,30 @@ def make_main_figure(operator_selected, dayofweek, start_date,end_date):
 
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
     df_graph = dff.groupby([dff['Date']]).sum().reset_index()
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df_graph['Date'], y=df_graph['NumberFlights'],mode='lines', name='NumberFlights'))
+    df_lockdown_1 = df_graph[(df_graph['Date'] >= start_lockdown_1) & (df_graph['Date'] <= end_lockdown_1)]
+    df_lockdown_2 = df_graph[(df_graph['Date'] >= start_lockdown_2) & (df_graph['Date'] <= end_lockdown_2)]
+
+    fig = go.Figure(data=[
+        go.Scatter(x=df_graph['Date'], y=df_graph['NumberFlights'],mode='lines',name='numberFlights',showlegend=False,line=dict(color="rgb(21, 127, 255)"),),
+        go.Scatter(x=df_lockdown_1['Date'], y=df_lockdown_1['NumberFlights'],mode='lines', name='1st lockdown', line=dict(color="crimson"),),
+        go.Scatter(x=df_lockdown_2['Date'], y=df_lockdown_2['NumberFlights'],mode='lines', name='2nd lockdown', line=dict(color="darkorange"),)
+        ]
+    )
     fig.update_layout(title_text = "Number of flights per date", 
                         title_x=0.5,
                         title_font_size=18, 
                         template='none',
                         paper_bgcolor='#fafafa',
                         plot_bgcolor='#fafafa',
-                        margin=dict(l=50, r=40, t=70, b=70)
+                        margin=dict(l=50, r=40, t=70, b=70),
                         )
-    fig.update_traces(marker_color= 'tomato')
+    fig.update_layout(legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1),
+                        )
     fig.update_xaxes(title_text="Date")
     fig.update_yaxes(title_text="number of Flights")
     return fig
@@ -390,8 +415,26 @@ def make_main_figure(operator_selected, dayofweek, start_date,end_date):
 def make_week_figure(operator_selected, dayofweek, start_date,end_date):
 
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
+
+    df_lockdown_1 = dff[(dff['Date'] >= start_lockdown_1) & (dff['Date'] <= end_lockdown_1)]
+    df_lockdown_2 = dff[(dff['Date'] >= start_lockdown_2) & (dff['Date'] <= end_lockdown_2)]
+
+    #Remove datagrames intersection for lockdowns
+    cond = dff['Date'].isin(df_lockdown_1['Date'])
+    dff.drop(dff[cond].index, inplace = True)
+    cond = dff['Date'].isin(df_lockdown_2['Date'])
+    dff.drop(dff[cond].index, inplace = True)
+
+    df_lockdown_1 = df_lockdown_1.groupby([df_lockdown_1['WeekNumber']]).sum().reset_index()
+    df_lockdown_2 = df_lockdown_2.groupby([df_lockdown_2['WeekNumber']]).sum().reset_index()
     df_graph = dff.groupby([dff['WeekNumber']]).sum().reset_index()
-    fig = px.bar(df_graph, x='WeekNumber', y='NumberFlights', text='NumberFlights')
+
+    fig = go.Figure(data=[
+        go.Bar(x=df_graph['WeekNumber'], y=df_graph['NumberFlights'], name='regular',marker_color='rgb(21, 127, 255)'),
+        go.Bar(x=df_lockdown_1['WeekNumber'], y=df_lockdown_1['NumberFlights'], name='1st lockdown',marker_color='crimson'),
+        go.Bar(x=df_lockdown_2['WeekNumber'], y=df_lockdown_2['NumberFlights'], name = '2nd lockdown', marker_color='darkorange')
+        ]
+    )
     fig.update_layout(title_text = "Number of flights per week", 
                         title_x=0.5,
                         title_font_size=18,
@@ -400,11 +443,20 @@ def make_week_figure(operator_selected, dayofweek, start_date,end_date):
                         template='none', 
                         paper_bgcolor='#fafafa',
                         plot_bgcolor='#fafafa', 
-                        margin=dict(l=50, r=40, t=70, b=70)
+                        margin=dict(l=50, r=40, t=70, b=70),
+                        barmode='stack',
+                        legend={'traceorder':'normal'},
+                        )
+    fig.update_layout(legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1),
                         )
     fig.update_traces(texttemplate='%{text:.2s}', 
                         textposition='outside', 
-                        marker_color= 'seaGreen')
+                    )
     fig.update_yaxes(title_text="Number of flights")
     fig.update_xaxes(title_text="No. of the week")
 
