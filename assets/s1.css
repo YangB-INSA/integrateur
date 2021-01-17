@@ -158,7 +158,13 @@ body {
 }
 
 .title {
-  margin-bottom:20px
+  margin-bottom:20px;
+}
+
+.title-plot {
+  margin-bottom:0px;
+  margin-top:0px;
+  text-align:center;
 }
 .rc-slider {
   margin-left: 0px;

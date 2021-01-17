@@ -22,12 +22,12 @@ df = pd.read_csv('/var/lib/jenkins/workspace/Microservice_Analyse/src/app/out/da
 df = df.drop(df.columns[[0]], axis=1)
 df.columns = ['Date','Hour','Manufacturer','Model','Operator','NumberFlights']
 
-print(df)
-
 df['Date'] = pd.to_datetime(df['Date'])
 df['DayOfWeek']=df['Date'].dt.day_name()
 df['WeekNumber']=df['Date'].dt.week
 df['Hour'] = pd.to_numeric(df['Hour'], errors = 'coerce')
+df['Year'] = df['Date'].dt.year
+df['Month'] = df['Date'].dt.month_name()
 
 # Range of the calendar
 start_date = min(df['Date'])
@@ -203,6 +203,10 @@ app.layout = html.Div(
                         ), 
                         html.Div(
                             [
+                                html.H6(
+                                    'Number of flights per date',
+                                    className='title-plot'
+                                ),
                                 dcc.Graph(
                                     id='total_graph',
                                 )
@@ -221,20 +225,51 @@ app.layout = html.Div(
             [
                 html.Div(
                     [
+                        
+                        html.H6(
+                            'Number of flights per week',
+                            className='title-plot'
+                        ),
+                        html.Div(
+                            [
+                                html.H6(
+                                    'Year : ',
+                                    className="control_label",
+                                    style={'margin-right':'1em','margin-left':'1em'}
+                                ),
+                                dcc.Dropdown(
+                                    id='year_week_dropdown',
+                                    options=[{'label': i, 'value': i} for i in df.Year.unique()],
+                                    value= 2020,
+                                    multi=False,
+                                    style=dict(
+                                        width='100px',
+                                        display='inline-block',
+                                        verticalAlign="middle",
+                                        color='rgb(21, 127, 255)'
+                                    )
+                                ),
+                            ],
+                            style={'display':'flex','align-items':'center'}
+                        ),
                         dcc.Graph(
                             id='week_graph',
                         )
                     ],
-                    className='pretty_container seven columns',
+                    className='pretty_container eight columns',
                 ),
                 html.Div(
                     [ 
-                        
+                        html.H6(
+                            'Average No. of flights per hour of the day',
+                            className='title-plot',
+                            style={'margin-bottom':'20px'}
+                        ),
                         dcc.Graph(
                             id='hour_graph'
                             )
                     ],
-                    className='pretty_container five columns',
+                    className='pretty_container four columns',
                 ),
             ],
             className='row'
@@ -243,6 +278,10 @@ app.layout = html.Div(
             [
                 html.Div(
                     [
+                        html.H6(
+                            'Proportion of the air trafic by day of the week',
+                            className='title-plot'
+                        ),
                         dcc.Graph(id='weekday_graph')
                     ],
                     className='pretty_container four columns',
@@ -250,7 +289,7 @@ app.layout = html.Div(
                 html.Div(
                     [
                         html.H4(
-                            'Operators of the french air traffic',
+                            'Operators of the french air trafic',
                             className = 'title',
                         ),
                         dash_table.DataTable(
@@ -321,6 +360,23 @@ def update_day_text(operator_selected, dayofweek, start_date,end_date):
     nb = dff.Date.unique().shape
     return nb
 
+@app.callback(Output('year_week_dropdown', 'options'),
+              [Input('operator_dropdown', 'value'),
+              Input('day_dropdown','value'),
+              Input('date_picker_range', 'start_date'),
+              Input('date_picker_range', 'end_date')])
+def set_year_options(operator_selected, dayofweek, start_date,end_date):
+
+    dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
+    return [{'label': i, 'value': i} for i in dff.Year.unique()]
+
+@app.callback(Output('year_week_dropdown', 'value'),
+              [Input('year_week_dropdown', 'options')])
+def set_year_value(options):
+    print(options)
+    print(type(options))
+    return options[-1].get('value')
+
 # Radio -> multi
 @app.callback(Output('day_dropdown', 'value'),
               [Input('day_selector', 'value')],
@@ -376,20 +432,19 @@ def operator_radio_value(dropdown):
 def make_main_figure(operator_selected, dayofweek, start_date,end_date):
 
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
-    df_graph = dff.groupby([dff['Date']]).sum().reset_index()
+    df_graph = dff.groupby(['Date','Year'])[['NumberFlights']].sum().reset_index()
+    df_2019 = df_graph.loc[df_graph['Year']==2019]
+    df_2020 = df_graph.loc[df_graph['Year']==2020]
     df_lockdown_1 = df_graph[(df_graph['Date'] >= start_lockdown_1) & (df_graph['Date'] <= end_lockdown_1)]
     df_lockdown_2 = df_graph[(df_graph['Date'] >= start_lockdown_2) & (df_graph['Date'] <= end_lockdown_2)]
 
     fig = go.Figure(data=[
-        go.Scatter(x=df_graph['Date'], y=df_graph['NumberFlights'],mode='lines',name='numberFlights',showlegend=False,line=dict(color="rgb(21, 127, 255)"),),
+        go.Scatter(x=df_graph['Date'], y=df_graph['NumberFlights'],mode='lines',name='numberFlights',showlegend=False,line=dict(color="rgb(21, 127, 255)")),
         go.Scatter(x=df_lockdown_1['Date'], y=df_lockdown_1['NumberFlights'],mode='lines', name='1st lockdown', line=dict(color="crimson"),),
         go.Scatter(x=df_lockdown_2['Date'], y=df_lockdown_2['NumberFlights'],mode='lines', name='2nd lockdown', line=dict(color="darkorange"),)
         ]
     )
-    fig.update_layout(title_text = "Number of flights per date", 
-                        title_x=0.5,
-                        title_font_size=18, 
-                        template='none',
+    fig.update_layout(template='none',
                         paper_bgcolor='#fafafa',
                         plot_bgcolor='#fafafa',
                         margin=dict(l=50, r=40, t=70, b=70),
@@ -401,8 +456,6 @@ def make_main_figure(operator_selected, dayofweek, start_date,end_date):
                         xanchor="right",
                         x=1),
                         )
-    fig.update_xaxes(title_text="Date")
-    fig.update_yaxes(title_text="number of Flights")
     return fig
 
 
@@ -410,24 +463,26 @@ def make_main_figure(operator_selected, dayofweek, start_date,end_date):
 @app.callback(Output('week_graph', 'figure'),
               [Input('operator_dropdown', 'value'),
               Input('day_dropdown','value'),
+              Input('year_week_dropdown', 'value'),
               Input('date_picker_range', 'start_date'),
               Input('date_picker_range', 'end_date')])
-def make_week_figure(operator_selected, dayofweek, start_date,end_date):
+def make_week_figure(operator_selected, dayofweek, year, start_date,end_date):
 
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
 
+    dff = dff[dff['Year'] == year]
     df_lockdown_1 = dff[(dff['Date'] >= start_lockdown_1) & (dff['Date'] <= end_lockdown_1)]
     df_lockdown_2 = dff[(dff['Date'] >= start_lockdown_2) & (dff['Date'] <= end_lockdown_2)]
 
-    #Remove datagrames intersection for lockdowns
     cond = dff['Date'].isin(df_lockdown_1['Date'])
     dff.drop(dff[cond].index, inplace = True)
     cond = dff['Date'].isin(df_lockdown_2['Date'])
     dff.drop(dff[cond].index, inplace = True)
 
-    df_lockdown_1 = df_lockdown_1.groupby([df_lockdown_1['WeekNumber']]).sum().reset_index()
-    df_lockdown_2 = df_lockdown_2.groupby([df_lockdown_2['WeekNumber']]).sum().reset_index()
-    df_graph = dff.groupby([dff['WeekNumber']]).sum().reset_index()
+    df_lockdown_1 = df_lockdown_1.groupby([df_lockdown_1['WeekNumber']])[['NumberFlights']].sum().reset_index()
+    df_lockdown_2 = df_lockdown_2.groupby([df_lockdown_2['WeekNumber']])[['NumberFlights']].sum().reset_index()
+    df_graph = dff.groupby(['WeekNumber','Year'])[['NumberFlights']].sum().reset_index()
+    #df_2020 = df_graph.loc[df_graph['Year']==2020]
 
     fig = go.Figure(data=[
         go.Bar(x=df_graph['WeekNumber'], y=df_graph['NumberFlights'], name='regular',marker_color='rgb(21, 127, 255)'),
@@ -435,31 +490,22 @@ def make_week_figure(operator_selected, dayofweek, start_date,end_date):
         go.Bar(x=df_lockdown_2['WeekNumber'], y=df_lockdown_2['NumberFlights'], name = '2nd lockdown', marker_color='darkorange')
         ]
     )
-    fig.update_layout(title_text = "Number of flights per week", 
-                        title_x=0.5,
-                        title_font_size=18,
-                        uniformtext_minsize=8, 
+    fig.update_layout(uniformtext_minsize=8, 
                         uniformtext_mode='hide', 
                         template='none', 
                         paper_bgcolor='#fafafa',
                         plot_bgcolor='#fafafa', 
-                        margin=dict(l=50, r=40, t=70, b=70),
+                        margin=dict(l=50, r=20, t=70, b=50),
                         barmode='stack',
                         legend={'traceorder':'normal'},
-                        )
+    )
     fig.update_layout(legend=dict(
                         orientation="h",
                         yanchor="bottom",
                         y=1.02,
                         xanchor="right",
                         x=1),
-                        )
-    fig.update_traces(texttemplate='%{text:.2s}', 
-                        textposition='outside', 
-                    )
-    fig.update_yaxes(title_text="Number of flights")
-    fig.update_xaxes(title_text="No. of the week")
-
+    )
     return fig
 
 # callback for hour_figure
@@ -472,25 +518,24 @@ def make_hour_figure(operator_selected, dayofweek, start_date,end_date):
 
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
     df_graph = dff.groupby(['WeekNumber','DayOfWeek','Hour']).sum().reset_index()
-    df_hour = df_graph.groupby(['Hour']).mean().reset_index().round(decimals=2)
-    fig = px.bar(df_hour, x='Hour', y='NumberFlights', text='NumberFlights')
-    fig.update_layout(title_text = "Average number of flights per hour of the day", 
-                        title_x=0.5,
-                        title_font_size=18,
-                        uniformtext_minsize=8, 
+    df_hour = df_graph.groupby(['Hour'])[['NumberFlights']].mean().reset_index().round(decimals=2)
+
+    fig = go.Figure(
+        data=
+        [
+            go.Bar(x=df_hour['Hour'], y=df_hour['NumberFlights'], name='No.of flights',marker_color='rgb(31, 31, 142)'),
+        ]
+    )
+    fig.update_layout(uniformtext_minsize=8, 
                         uniformtext_mode='hide', 
                         template='none', 
                         paper_bgcolor='#fafafa',
                         plot_bgcolor='#fafafa', 
-                        margin=dict(l=50, r=40, t=70, b=70)
+                        margin=dict(l=40, r=20, t=60, b=30)
                         )
     fig.update_traces(texttemplate='%{text:.2s}',
                         textposition='outside',
-                        marker_color= 'indigo'
                         )
-    fig.update_xaxes(dtick=1,title_text="Hour of the day")
-    fig.update_yaxes(title_text="Number of flights")
-
     return fig
 
 # callback for weekday_figure
@@ -502,19 +547,16 @@ def make_hour_figure(operator_selected, dayofweek, start_date,end_date):
 def make_dayofweek_figure(operator_selected, dayofweek, start_date,end_date):
 
     dff = filter_dataframe(df, operator_selected, dayofweek, start_date, end_date)
-    df_graph = dff.groupby(['WeekNumber','DayOfWeek']).sum().reset_index()
+    df_graph = dff.groupby(['WeekNumber','DayOfWeek'])[['NumberFlights']].sum().reset_index()
     test = df_graph.groupby('DayOfWeek').mean().reset_index().round(decimals=2)
-    fig = px.pie(test, values='NumberFlights', names='DayOfWeek', title='Average Number of flights per weekday')
+    fig = px.pie(test, values='NumberFlights', names='DayOfWeek')
     fig.update_traces(textposition='inside', textinfo='percent+label',textfont_size=15)
-    fig.update_layout(title_text = "Proportion of the french air traffic per day of the week", 
-                        title_x=0.5,
-                        title_font_size=18,
-                        uniformtext_minsize=8, 
+    fig.update_layout(uniformtext_minsize=8, 
                         uniformtext_mode='hide', 
                         template='none', 
                         paper_bgcolor='#fafafa',
                         plot_bgcolor='#fafafa', 
-                        margin=dict(l=80, r=80, t=70, b=70),
+                        margin=dict(l=80, r=80, t=30, b=30),
                         showlegend=False
                         )
 
